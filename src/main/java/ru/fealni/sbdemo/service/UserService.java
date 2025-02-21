@@ -1,0 +1,74 @@
+package ru.fealni.sbdemo.service;
+
+import jakarta.transaction.Transactional;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import ru.fealni.sbdemo.repository.User;
+import ru.fealni.sbdemo.repository.UserRepository;
+
+import java.time.LocalDate;
+import java.time.Period;
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * @author Fedianin
+ */
+@Service
+public class UserService {
+
+    private final UserRepository userRepository;
+
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    @GetMapping("/user")
+    public List<User> findAll() {
+       return userRepository.findAll();
+    }
+
+    @PostMapping
+    public User create(@RequestBody User user) {
+        Optional<User> optionalUser = userRepository.findByEmail(user.getEmail());
+        if (optionalUser.isPresent()) {
+            throw new IllegalStateException("User with this email already Exists");
+        }
+        user.setAge(Period.between(user.getBirthday(), LocalDate.now()).getYears());
+        return userRepository.save(user);
+    }
+
+    public void delete(Long id) {
+        Optional<User> optionalUser = userRepository.findById(id);
+        if (optionalUser.isEmpty()) {
+            throw new IllegalStateException("User with this id does not exist");
+        }
+        userRepository.delete(optionalUser.get());
+    }
+
+    @Transactional
+    public void update(Long id, String email, String name) {
+        Optional<User> optionalUser = userRepository.findById(id);
+        if (optionalUser.isEmpty()) {
+            throw new IllegalStateException("User with this id does not exist");
+        }
+        User user = optionalUser.get();
+        if (email != null && !email.equals(user.getEmail())) {
+            Optional<User> foundUser = userRepository.findByEmail(email);
+            if (foundUser.isPresent()) {
+                throw new IllegalStateException("User with this email already Exists");
+            }
+            user.setEmail(email);
+        }
+        if (name != null && !name.equals(user.getName())) {
+            user.setName(name);
+        }
+
+
+        //userRepository.save(user); // @Transactional
+
+    }
+}
